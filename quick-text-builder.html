@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quick Text Builder</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mut:#667085;--bd:#d9dde5;--ac:#2f6fed;--acx:#fff;--ok:#e8f0ff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171d;--card:#1d222b;--tx:#e8ebf1;--mut:#9aa3b2;--bd:#323946;--ac:#6b98ff;--acx:#0d1424;--ok:#26324d}}
+:root[data-theme="dark"]{--bg:#14171d;--card:#1d222b;--tx:#e8ebf1;--mut:#9aa3b2;--bd:#323946;--ac:#6b98ff;--acx:#0d1424;--ok:#26324d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Segoe UI",Arial,sans-serif;line-height:1.5}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+h2{font-size:14px;color:var(--mut);margin:0 0 10px;font-weight:600}
+textarea{width:100%;min-height:200px;resize:vertical;border:1px solid var(--bd);border-radius:10px;padding:12px;font:inherit;font-size:17px;background:var(--bg);color:var(--tx)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+button,select,input[type=text]{font:inherit;color:var(--tx)}
+.chip{border:1px solid var(--bd);background:var(--bg);border-radius:10px;padding:10px 14px;cursor:pointer;min-width:90px}
+.chip:hover{border-color:var(--ac);background:var(--ok)}
+.chip:active{transform:scale(.97)}
+.main{background:var(--ac);color:var(--acx);border:0;border-radius:10px;padding:10px 18px;cursor:pointer;font-weight:600}
+.ghost{background:transparent;border:1px solid var(--bd);border-radius:10px;padding:10px 18px;cursor:pointer}
+select{border:1px solid var(--bd);background:var(--bg);border-radius:10px;padding:10px;min-width:170px}
+.chk{display:flex;align-items:center;gap:8px;border:1px solid var(--bd);border-radius:10px;padding:10px 14px;cursor:pointer;background:var(--bg)}
+.chk input{width:18px;height:18px;accent-color:var(--ac)}
+.chk:has(input:checked){background:var(--ok);border-color:var(--ac)}
+.add{display:flex;gap:8px;flex-wrap:wrap}
+.add input{flex:1;min-width:180px;border:1px solid var(--bd);border-radius:10px;padding:10px;background:var(--bg)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+#msg{color:var(--mut);font-size:13px}
+.pair{display:grid;grid-template-columns:1.2fr 1.2fr .8fr;gap:14px}
+@media (max-width:640px){.pair{grid-template-columns:1fr}}
+.opt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--bd);border-radius:10px;padding:8px 12px;background:var(--bg)}
+.opt:has(input[type=checkbox]:checked){background:var(--ok);border-color:var(--ac)}
+.opt label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.opt input[type=checkbox]{width:18px;height:18px;accent-color:var(--ac)}
+.opt select.sm{min-width:0;width:auto;padding:6px 8px}
+.sm{width:96px;border:1px solid var(--bd);border-radius:8px;padding:6px 8px;background:var(--card);color:var(--tx);font:inherit}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Quick Text Builder</h1>
+
+  <div class="card">
+    <h2>Text</h2>
+    <textarea id="out" placeholder="Type here or tap the shortcuts below..."></textarea>
+    <div class="bar">
+      <button class="main" id="copy">Copy text</button>
+      <button class="ghost" id="clear">Clear all</button>
+      <span id="msg"></span>
+    </div>
+  </div>
+
+  <div class="pair">
+    <div class="card">
+      <h2>Shift handover</h2>
+      <div class="row" id="shift"></div>
+    </div>
+    <div class="card">
+      <h2>Code status</h2>
+      <div class="row" id="code"></div>
+    </div>
+    <div class="card">
+      <h2>Neurological assessment</h2>
+      <div class="row" id="gcs"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Respiratory</h2>
+    <div class="row" id="resp"></div>
+  </div>
+
+  <div class="card">
+    <h2>Dropdowns</h2>
+    <div class="row" id="selects"></div>
+    <div class="row" id="feed"></div>
+  </div>
+
+  <div class="card">
+    <h2>Invasive lines</h2>
+    <div class="row"><button class="main" id="addCan">ADD CANNULA</button><button class="main" id="addCvl">ADD CVL</button></div>
+    <div id="canList" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>
+    <div id="cvlList" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Monitor</h2>
+    <div class="row" id="mon"></div>
+  </div>
+</div>
+
+<script>
+var SHIFT=[
+ {time:"0700",from:"night"},
+ {time:"1900",from:"morning"}
+];
+var SELECTS=[];
+
+var out=document.getElementById("out");
+
+function insert(t){
+  out.focus();
+  var s=out.selectionStart==null?out.value.length:out.selectionStart,e=out.selectionEnd==null?s:out.selectionEnd;
+  var before=out.value.slice(0,s),after=out.value.slice(e);
+  var sp=(before&&!/[\s\n]$/.test(before))?" ":"";
+  var add=sp+t+" ";
+  out.value=before+add+after;
+  var p=(before+add).length;
+  out.setSelectionRange(p,p);
+}
+function insertBlock(t){
+  out.focus();
+  var s=out.selectionStart==null?out.value.length:out.selectionStart,e=out.selectionEnd==null?s:out.selectionEnd;
+  var before=out.value.slice(0,s),after=out.value.slice(e);
+  var nl=(before&&!/\n$/.test(before))?"\n":"";
+  var add=nl+t+"\n";
+  out.value=before+add+after;
+  var p=(before+add).length;
+  out.setSelectionRange(p,p);
+}
+function renderCode(){
+  var c=document.getElementById("code");
+  ["pt is full code status","pt is DNAR (paper in file with all details)"].forEach(function(t){
+    var b=document.createElement("button");b.className="chip";b.textContent=t;
+    b.onclick=function(){
+      out.focus();
+      var s=out.selectionStart==null?out.value.length:out.selectionStart,e=out.selectionEnd==null?s:out.selectionEnd;
+      var before=out.value.slice(0,s).replace(/[ \t]+$/,""),after=out.value.slice(e);
+      var add=(before&&!/\n$/.test(before)?", ":"")+t+" ";
+      out.value=before+add+after;
+      var p=(before+add).length;out.setSelectionRange(p,p);
+    };
+    c.appendChild(b);
+  });
+}
+function renderGcs(){
+  var c=document.getElementById("gcs");
+  var s=document.createElement("select");
+  var o=document.createElement("option");o.value="";o.textContent="GCS ▾";s.appendChild(o);
+  for(var i=0;i<=15;i++){var x=document.createElement("option");x.value=i;x.textContent=i;s.appendChild(x)}
+  s.onchange=function(){
+    if(s.value==="")return;
+    var t="pt GCS is "+s.value+"/15";
+    out.focus();
+    var st=out.selectionStart==null?out.value.length:out.selectionStart,en=out.selectionEnd==null?st:out.selectionEnd;
+    var before=out.value.slice(0,st).replace(/[ \t]+$/,""),after=out.value.slice(en);
+    var add=(before&&!/\n$/.test(before)?", ":"")+t+" ";
+    out.value=before+add+after;
+    var p=(before+add).length;out.setSelectionRange(p,p);
+    s.selectedIndex=0;
+  };
+  c.appendChild(s);
+}
+function o2(x){if(!x)return "";return /L$/.test(x)?x+" O2":x}
+function vent(v){var l=["mode","FiO2","TV","RR"],r="";for(var i=0;i<4;i++){if(v[i])r+=", "+l[i]+" "+v[i]}return r}
+function rng(a,b,st){var r=[];for(var x=a;x<=b+1e-9;x+=st){r.push((Math.round(x*10)/10)+"L")}return r}
+var RESP=[
+ {name:"Breathing spontaneously",fields:[],build:function(v){return "pt breathing spontaneously"}},
+ {name:"Face mask",fields:[{ph:"O2 L",opts:rng(5,10,1)}],build:function(v){return "pt on face mask"+(v[0]?" "+o2(v[0]):"")}},
+ {name:"Nasal cannula",fields:[{ph:"O2 L",opts:rng(0.5,4,0.5)}],build:function(v){return "pt on nasal cannula"+(v[0]?" "+o2(v[0]):"")}},
+ {name:"Tracheostomy size",fields:[{ph:"size",opts:["6.5mm","7mm","7.5mm","8.0mm"]},{ph:"O2 / room air",opts:["Room air",{t:"on MV",v:"Connected to Mechanical ventilator"},"0.5L"].concat(rng(1,10,1))},{ph:"mode",mv:1},{ph:"FiO2",mv:1},{ph:"TV",mv:1},{ph:"RR",mv:1}],build:function(v){var mv=v[1]==="Connected to Mechanical ventilator";return "pt breathing from Tracheostomy size"+(v[0]?" "+v[0]:"")+(v[1]?(/L$/.test(v[1])?" with ":", ")+o2(v[1]):"")+(mv?" ["+vent(v.slice(2)).slice(2)+"]":"")},mvOn:function(v){return v[1]==="Connected to Mechanical ventilator"}},
+ {name:"Intubated with ETT size",fields:[{ph:"size",opts:["6.5mm","7mm","7.5mm","8.0mm"]},{ph:"fixation cm"},{ph:"mode",mv:1},{ph:"FiO2",mv:1},{ph:"TV",mv:1},{ph:"RR",mv:1}],build:function(v){return "pt intubated with ETT size"+(v[0]?" "+v[0]:"")+(v[1]?" fixation "+v[1]+(/^\d+(\.\d+)?$/.test(v[1])?"cm":"")+" connected to Mechanical ventilator ["+vent(v.slice(2)).slice(2)+"]":"")},mvOn:function(v){return !!v[1]}}
+];
+function removeText(t){
+  if(!t)return;
+  var k=out.value.indexOf(t);
+  if(k>=0){out.value=(out.value.slice(0,k)+out.value.slice(k+t.length)).replace(/ {2,}/g," ")}
+}
+function insertComma(t){
+  out.focus();
+  var s=out.selectionStart==null?out.value.length:out.selectionStart,e=out.selectionEnd==null?s:out.selectionEnd;
+  var before=out.value.slice(0,s).replace(/[ \t]+$/,""),after=out.value.slice(e);
+  var pre=(before&&!/\n$/.test(before))?", ":"";
+  out.value=before+pre+t+" "+after;
+  var p=(before+pre+t+" ").length;out.setSelectionRange(p,p);
+  return pre;
+}
+function renderOpts(list,id){
+  var c=document.getElementById(id);
+  list.forEach(function(r){
+    var d=document.createElement("div");d.className="opt";
+    var l=document.createElement("label");
+    var cb=document.createElement("input");cb.type="checkbox";
+    l.appendChild(cb);l.appendChild(document.createTextNode(r.name));d.appendChild(l);
+    var ins=r.fields.map(function(f){
+      var i;
+      if(f.opts){
+        i=document.createElement("select");i.className="sm";
+        var o=document.createElement("option");o.value="";o.textContent=f.ph+" \u25be";i.appendChild(o);
+        f.opts.forEach(function(v){var x=document.createElement("option");var o=(typeof v==="object");x.value=o?v.v:v;x.textContent=o?v.t:v;i.appendChild(x)});
+      }else{i=document.createElement("input");i.type="text";i.className="sm";i.placeholder=f.ph}
+      d.appendChild(i);return i;
+    });
+    var pre="",last="";
+    function refresh(){var v=ins.map(function(i){return i.value.trim()});ins.forEach(function(e,k){if(r.fields[k].mv)e.style.display=(r.mvOn&&r.mvOn(v))?"":"none"})}
+    refresh();
+    function val(){return r.build(ins.map(function(i){return i.value.trim()}))}
+    cb.onchange=function(){
+      if(cb.checked){last=val();pre=insertComma(last)}
+      else{removeText(pre+last);last="";pre=""}
+    };
+    ins.forEach(function(i){i[i.tagName==="SELECT"?"onchange":"oninput"]=function(){
+      refresh();
+      if(!cb.checked)return;
+      var n=val(),k=out.value.indexOf(pre+last);
+      if(k>=0){out.value=out.value.slice(0,k)+pre+n+out.value.slice(k+pre.length+last.length)}
+      last=n;
+    }});
+    c.appendChild(d);
+  });
+}
+var DIETS=["DM","Low salt low fat DM","low salt low fat","low fat","renal diet","renal diet DM"];
+var MILKS=["Diabetic milk","oral supplements milk","Nepro milk","High Calorie milk","high protein milk"];
+var SIZES=["14 FR","16 FR","18 FR","20 FR"];
+function tube(n){return {name:n,fields:[{ph:"size",opts:SIZES},{ph:"milk",opts:MILKS}],build:function(v){return "pt on "+n+(v[0]?" "+v[0]:"")+(v[1]?" with ongoing "+v[1]:"")}}}
+var FEED=[
+ {name:"orally",fields:[{ph:"diet",opts:DIETS}],build:function(v){return "pt is eating orally"+(v[0]?" "+v[0]+(/diet/i.test(v[0])?"":" diet"):"")}},
+ tube("NGT"),tube("OGT"),tube("GT"),
+ {name:"NPO",fields:[],build:function(v){return "pt is NPO"}}
+];
+function renderResp(){renderOpts(RESP,"resp");renderOpts(FEED,"feed")}
+function renderMon(){
+  var c=document.getElementById("mon");
+  c.style.alignItems="center";
+  var b=document.createElement("button");b.className="chip";b.textContent="Connected to cardiac monitor";
+  c.appendChild(b);
+  var ins=["BP","HR","Spo2","RR"].map(function(l){
+    var i=document.createElement("input");i.type="text";i.className="sm";i.placeholder=l;c.appendChild(i);return i;
+  });
+  b.onclick=function(){
+    var v=ins.map(function(i){return i.value.trim()||" "});
+    insertComma("pt is connected to cardiac monitor with all ECG leads attached shown all vital signs [BP:"+v[0]+", HR:"+v[1]+", Spo2:"+v[2]+", RR:"+v[3]+"], pt wound assessment done and mentioned in the wound assessment electronic form");
+  };
+}
+function renderLimbs(){
+  var c=document.getElementById("gcs");
+  ["Left limbs","Right limbs"].forEach(function(n){
+    var s=document.createElement("select");
+    var o=document.createElement("option");o.value="";o.textContent=n+" \u25be";s.appendChild(o);
+    ["strong","weak"].forEach(function(v){var x=document.createElement("option");x.value=v;x.textContent=v;s.appendChild(x)});
+    s.onchange=function(){if(!s.value)return;insertComma("pt "+n.toLowerCase()+" are "+s.value);s.selectedIndex=0};
+    c.appendChild(s);
+  });
+}
+var SITES=["RT hand","RT arm","LT hand","LT arm","RT feet","RT leg","LT feet","LT leg"];
+var GAUGES=["14G","16G","18G","20G","22G","24G"];
+var CVLSITES=["RT Jugular","LT Jugular","LT Femoral","RT Femoral"];
+var LUMENS=["Double lumen","Triple lumen"];
+var resetFns=[];
+function resetLines(){resetFns.forEach(function(f){f()})}
+function mkSel(d,ph,arr,refresh){
+  var e=document.createElement("select");e.className="sm";
+  var o=document.createElement("option");o.value="";o.textContent=ph+" \u25be";e.appendChild(o);
+  arr.forEach(function(v){var q=document.createElement("option");q.value=v;q.textContent=v;e.appendChild(q)});
+  e.onchange=refresh;d.appendChild(e);return e;
+}
+function mkInput(d,ph,refresh){
+  var e=document.createElement("input");e.type="text";e.className="sm";e.placeholder=ph;
+  e.style.width="260px";e.style.maxWidth="100%";e.oninput=refresh;d.appendChild(e);return e;
+}
+function mkCheck(d,txt,refresh){
+  var l=document.createElement("label");
+  var c=document.createElement("input");c.type="checkbox";c.onchange=refresh;
+  l.appendChild(c);l.appendChild(document.createTextNode(txt));d.appendChild(l);return c;
+}
+function lineSection(btnId,listId,lead,mk){
+  var list=document.getElementById(listId),rows=[],pre="",last="",isOpen=false;
+  resetFns.push(function(){rows=[];pre="";last="";isOpen=false});
+  function block(){
+    var t=rows.map(function(r){return r.val()}).filter(Boolean);
+    return lead+(t.length?" "+t.join(" and "):"");
+  }
+  function refresh(){
+    if(!rows.length){if(isOpen){removeText(pre+last)}pre="";last="";isOpen=false;return}
+    var n=block();
+    if(!isOpen){pre=insertComma(n);last=n;isOpen=true;return}
+    var k=out.value.indexOf(pre+last);
+    if(k>=0){out.value=out.value.slice(0,k)+pre+n+out.value.slice(k+pre.length+last.length)}
+    last=n;
+  }
+  document.getElementById(btnId).onclick=function(){
+    var d=document.createElement("div");d.className="opt";
+    var r=mk(d,refresh);
+    var rm=document.createElement("button");rm.className="ghost";rm.textContent="\u00d7";rm.title="Remove";rm.style.padding="4px 10px";d.appendChild(rm);
+    rows.push(r);
+    rm.onclick=function(){rows.splice(rows.indexOf(r),1);d.remove();refresh()};
+    list.appendChild(d);
+    refresh();
+  };
+}
+function tail(on,cb,p){
+  if(on.value.trim())p.push("with ongoing "+on.value.trim());
+  if(cb.checked)p.push("closed for medication");
+  return p.join(" ");
+}
+function renderLines(){
+  lineSection("addCan","canList","pt have",function(d,refresh){
+    var site=mkSel(d,"site",SITES,refresh),g=mkSel(d,"gauge",GAUGES,refresh);
+    var on=mkInput(d,"with ongoing",refresh),cb=mkCheck(d,"closed for medication",refresh);
+    return {val:function(){
+      var p=[];
+      if(site.value)p.push(site.value);
+      if(g.value){p.push("IVC");p.push(g.value)}
+      return tail(on,cb,p);
+    }};
+  });
+  lineSection("addCvl","cvlList","pt have",function(d,refresh){
+    var site=mkSel(d,"Site",CVLSITES,refresh),lu=mkSel(d,"Lumens",LUMENS,refresh);
+    var on=mkInput(d,"with ongoing",refresh),cb=mkCheck(d,"closed for medication",refresh);
+    return {val:function(){
+      var p=[];
+      if(site.value)p.push(site.value);
+      p.push("CVL");
+      if(lu.value)p.push(lu.value);
+      return tail(on,cb,p);
+    }};
+  });
+}
+function renderShift(){
+  var c=document.getElementById("shift");
+  SHIFT.forEach(function(x){
+    var b=document.createElement("button");b.className="chip";b.textContent=x.time;
+    b.style.fontSize="20px";b.style.fontWeight="700";b.style.minWidth="130px";
+    b.onclick=function(){insert(x.time+"H:\nReceived pt from "+x.from+" shift, pt case of")};
+    c.appendChild(b);
+  });
+}
+function renderSelects(){
+  var c=document.getElementById("selects");
+  SELECTS.forEach(function(g){
+    var s=document.createElement("select");
+    var o=document.createElement("option");o.value="";o.textContent=g.label+" ▾";s.appendChild(o);
+    g.items.forEach(function(i){var x=document.createElement("option");x.value=i;x.textContent=i;s.appendChild(x)});
+    s.onchange=function(){if(s.value){insert(s.value);s.selectedIndex=0}};
+    c.appendChild(s);
+  });
+}
+function flash(m){var el=document.getElementById("msg");el.textContent=m;setTimeout(function(){el.textContent=""},2000)}
+
+document.getElementById("copy").onclick=function(){
+  out.select();
+  var done=function(){flash("Copied ✓")};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(out.value).then(done,function(){document.execCommand("copy");done()})}
+  else{document.execCommand("copy");done()}
+};
+document.getElementById("clear").onclick=function(){
+  out.value="";
+  document.getElementById("canList").innerHTML="";document.getElementById("cvlList").innerHTML="";resetLines();
+  document.querySelectorAll("#resp input[type=checkbox],#feed input[type=checkbox]").forEach(function(i){i.checked=false});
+  out.focus();
+};
+renderMon();renderLines();renderShift();renderCode();renderGcs();renderLimbs();renderResp();renderSelects();
+</script>
+</body>
+</html>
